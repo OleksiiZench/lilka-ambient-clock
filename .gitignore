@@ -25,3 +25,7 @@ compile_commands.json
 .vscode/launch.json
 .vscode/ipch
 
+### Local runtime config (secrets) ###
+sdcard/settings.json
+settings.json
+
