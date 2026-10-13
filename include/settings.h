@@ -13,11 +13,19 @@ struct Settings {
     bool blinkColon;      // чи блимає двокрапка щосекунди
 };
 
-// Заповнити налаштування типовими значеннями (Europe/Kyiv, cyan на чорному).
+// Заповнити налаштування типовими значеннями (Europe/Kyiv, red на чорному).
 void settingsSetDefaults(Settings& settings);
+
+// Результат завантаження налаштувань.
+enum class SettingsStatus {
+    Ok,
+    SdUnavailable,
+    FileNotFound,
+    ParseError,
+};
 
 // Спробувати завантажити налаштування з /settings.json на SD-карті.
 //
-// Повертає true, якщо файл успішно прочитано та розібрано.
 // У будь-якому разі `settings` містить або значення з файлу, або типові.
-bool settingsLoad(Settings& settings);
+// Повертає статус, щоб показати точну причину невдачі.
+SettingsStatus settingsLoad(Settings& settings);

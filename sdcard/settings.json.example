@@ -8,7 +8,7 @@
     "ntpServer": "pool.ntp.org"
   },
   "display": {
-    "fg": "#00E5FF",
+    "fg": "#FF0000",
     "bg": "#000000",
     "blinkColon": false
   }

@@ -1,5 +1,7 @@
 #include "clockface.h"
 
+#include "logger.h"
+
 namespace {
 
 lilka::Canvas* canvas = nullptr;
@@ -30,6 +32,17 @@ int16_t measurePair(const uint8_t* font) {
     return lilka::getTextWidth(font, "00");
 }
 
+// Намалювати цифри так, щоб їхні реальні межі були відцентровані по вертикалі
+// відносно centerY (а не по метриках шрифту, які включають місце під нижні виноси).
+void drawDigitsCentered(const char* text, int16_t x, int16_t centerY) {
+    int16_t x1, y1;
+    uint16_t w, h;
+    canvas->getTextBounds(text, x, 0, &x1, &y1, &w, &h);
+    const int16_t baselineY = centerY - h / 2 - y1;
+    canvas->setCursor(x, baselineY);
+    canvas->print(text);
+}
+
 } // namespace
 
 void clockFaceBegin(const Settings& settings) {
@@ -53,7 +66,7 @@ void clockFaceBegin(const Settings& settings) {
     canvas->setFont(digitFont);
     canvas->setTextColor(settings.foreground);
 
-    lilka::serial.log("Clock face ready, digit font height: %d", digitHeight);
+    loggerInfo("Clock face ready, digit font height: %d", digitHeight);
 }
 
 void clockFaceRender(const Settings& settings, const struct tm& time, bool colonVisible) {
@@ -72,10 +85,8 @@ void clockFaceRender(const Settings& settings, const struct tm& time, bool colon
     snprintf(hours, sizeof(hours), "%02d", time.tm_hour);
     snprintf(minutes, sizeof(minutes), "%02d", time.tm_min);
 
-    canvas->drawTextAligned(hours, startX, centerY, lilka::ALIGN_START, lilka::ALIGN_CENTER);
-    canvas->drawTextAligned(
-        minutes, startX + pairWidth + colonWidth, centerY, lilka::ALIGN_START, lilka::ALIGN_CENTER
-    );
+    drawDigitsCentered(hours, startX, centerY);
+    drawDigitsCentered(minutes, startX + pairWidth + colonWidth, centerY);
 
     if (colonVisible) {
         const int16_t dotRadius = digitHeight / 12 > 2 ? digitHeight / 12 : 2;

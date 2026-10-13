@@ -4,6 +4,8 @@
 #include <SD.h>
 #include <lilka.h>
 
+#include "logger.h"
+
 namespace {
 
 // Типовий часовий пояс: Europe/Kyiv (EET/EEST).
@@ -50,23 +52,37 @@ void settingsSetDefaults(Settings& settings) {
     settings.wifiPassword = "";
     settings.timezone = DEFAULT_TZ;
     settings.ntpServer = DEFAULT_NTP;
-    parseHexColor("#00E5FF", settings.foreground);
+    parseHexColor("#FF0000", settings.foreground);
     parseHexColor("#000000", settings.background);
     settings.blinkColon = false;
 }
 
-bool settingsLoad(Settings& settings) {
+SettingsStatus settingsLoad(Settings& settings) {
     settingsSetDefaults(settings);
 
+    // Спроба монтування під час lilka::begin() могла не вдатися через
+    // поганий контакт картки, тож пробуємо ще кілька разів.
+    constexpr int SD_MOUNT_ATTEMPTS = 3;
+    for (int attempt = 1; !lilka::fileutils.isSDAvailable() && attempt <= SD_MOUNT_ATTEMPTS; attempt++) {
+        loggerError("SD card mount attempt %d/%d...", attempt, SD_MOUNT_ATTEMPTS);
+        delay(200);
+        lilka::fileutils.initSD();
+    }
+
     if (!lilka::fileutils.isSDAvailable()) {
-        lilka::serial.log("SD card is not available, using default settings");
-        return false;
+        loggerError("SD card is not available (check FAT32 formatting and seating)");
+        return SettingsStatus::SdUnavailable;
+    }
+
+    if (!SD.exists(SETTINGS_PATH)) {
+        loggerError("File %s not found on SD card", SETTINGS_PATH);
+        return SettingsStatus::FileNotFound;
     }
 
     File file = SD.open(SETTINGS_PATH, FILE_READ);
     if (!file) {
-        lilka::serial.log("No %s found on SD card, using default settings", SETTINGS_PATH);
-        return false;
+        loggerError("Failed to open %s for reading", SETTINGS_PATH);
+        return SettingsStatus::FileNotFound;
     }
 
     String content = file.readString();
@@ -75,8 +91,8 @@ bool settingsLoad(Settings& settings) {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, content);
     if (error) {
-        lilka::serial.err("Failed to parse %s: %s", SETTINGS_PATH, error.c_str());
-        return false;
+        loggerError("Failed to parse %s: %s", SETTINGS_PATH, error.c_str());
+        return SettingsStatus::ParseError;
     }
 
     readString(doc["wifi"]["ssid"], settings.wifiSsid);
@@ -100,6 +116,6 @@ bool settingsLoad(Settings& settings) {
     }
     settings.background = color;
 
-    lilka::serial.log("Settings loaded from SD card");
-    return true;
+    loggerInfo("Settings loaded from SD card (ssid: \"%s\")", settings.wifiSsid.c_str());
+    return SettingsStatus::Ok;
 }
