@@ -8,6 +8,9 @@ lilka::Canvas* canvas = nullptr;
 const uint8_t* digitFont = nullptr;
 int16_t digitHeight = 0;
 
+// Зсув усього циферблата по горизонталі (від'ємне — ліворуч).
+constexpr int16_t FACE_OFFSET_X = -4;
+
 // Великі цифрові шрифти (тільки цифри). Двокрапку малюємо вручну,
 // бо повні (_tf) варіанти існують лише до 58 px.
 const uint8_t* const FONT_CANDIDATES[] = {
@@ -77,7 +80,7 @@ void clockFaceRender(const Settings& settings, const struct tm& time, bool colon
     const int16_t pairWidth = measurePair(digitFont);
     const int16_t colonWidth = pairWidth / 2;
     const int16_t totalWidth = pairWidth * 2 + colonWidth;
-    const int16_t startX = (canvas->width() - totalWidth) / 2;
+    const int16_t startX = (canvas->width() - totalWidth) / 2 + FACE_OFFSET_X;
     const int16_t centerY = canvas->height() / 2;
 
     char hours[3];
