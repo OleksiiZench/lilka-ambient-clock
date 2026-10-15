@@ -55,6 +55,7 @@ void settingsSetDefaults(Settings& settings) {
     parseHexColor("#FF0000", settings.foreground);
     parseHexColor("#000000", settings.background);
     settings.blinkColon = false;
+    settings.showBattery = true;
 }
 
 SettingsStatus settingsLoad(Settings& settings) {
@@ -102,6 +103,10 @@ SettingsStatus settingsLoad(Settings& settings) {
 
     if (doc["display"]["blinkColon"].is<bool>()) {
         settings.blinkColon = doc["display"]["blinkColon"].as<bool>();
+    }
+
+    if (doc["display"]["showBattery"].is<bool>()) {
+        settings.showBattery = doc["display"]["showBattery"].as<bool>();
     }
 
     uint16_t color = settings.foreground;

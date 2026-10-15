@@ -10,6 +10,7 @@
   "display": {
     "fg": "#FF0000",
     "bg": "#000000",
-    "blinkColon": false
+    "blinkColon": false,
+    "showBattery": true
   }
 }

@@ -11,6 +11,7 @@ struct Settings {
     uint16_t foreground;  // колір цифр (RGB565)
     uint16_t background;  // колір фону (RGB565)
     bool blinkColon;      // чи блимає двокрапка щосекунди
+    bool showBattery;     // чи показувати індикатор рівня заряду
 };
 
 // Заповнити налаштування типовими значеннями (Europe/Kyiv, red на чорному).

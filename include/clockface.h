@@ -9,7 +9,9 @@
 void clockFaceBegin(const Settings& settings);
 
 // Намалювати час (HH:MM) на буфері та вивести його на екран.
-void clockFaceRender(const Settings& settings, const struct tm& time, bool colonVisible);
+// `batteryLevel` — рівень заряду у відсотках (0..100) або -1, якщо акумулятор
+// відсутній. Індикатор малюється лише коли settings.showBattery == true.
+void clockFaceRender(const Settings& settings, const struct tm& time, bool colonVisible, int batteryLevel);
 
 // Показати службове повідомлення (для станів "підключення", "помилка" тощо).
 void clockFaceMessage(const Settings& settings, const String& line1, const String& line2 = "");

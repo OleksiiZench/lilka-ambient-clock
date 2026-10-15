@@ -46,6 +46,51 @@ void drawDigitsCentered(const char* text, int16_t x, int16_t centerY) {
     canvas->print(text);
 }
 
+// Намалювати індикатор рівня заряду у правому верхньому куті: контур
+// батарейки зі "стовпчиком" заряду та відсотком. Колір — як у цифр (foreground).
+void drawBatteryIndicator(const Settings& settings, int level) {
+    // Відступ від правого краю більший за звичайний: заокруглення екрана
+    // зрізає верхній правий кут, тож зсуваємо індикатор ліворуч.
+    const int16_t margin = 20;
+    const int16_t bodyW = 30;
+    const int16_t bodyH = 14;
+    const int16_t nubW = 3;
+    const int16_t nubH = 6;
+    const int16_t x = canvas->width() - margin - bodyW - nubW;
+    const int16_t y = margin;
+
+    canvas->setFont(FONT_10x20);
+    canvas->setTextColor(settings.foreground);
+
+    char label[8];
+    snprintf(label, sizeof(label), "%d%%", level);
+    const int16_t labelW = lilka::getTextWidth(FONT_10x20, label);
+    const int16_t labelX = x - 6 - labelW;
+    int16_t bx1, by1;
+    uint16_t bw, bh;
+    canvas->getTextBounds(label, 0, 0, &bx1, &by1, &bw, &bh);
+    canvas->setCursor(labelX, y + bodyH / 2 - bh / 2 - by1);
+    canvas->print(label);
+
+    // Контур батарейки та її "плюсовий" виступ.
+    canvas->drawRect(x, y, bodyW, bodyH, settings.foreground);
+    canvas->fillRect(x + bodyW, y + (bodyH - nubH) / 2, nubW, nubH, settings.foreground);
+
+    // Внутрішній стовпчик заряду пропорційно до рівня.
+    const int16_t pad = 2;
+    const int16_t innerW = bodyW - 2 * pad;
+    const int16_t innerH = bodyH - 2 * pad;
+    int16_t fillW = innerW * level / 100;
+    if (level > 0 && fillW < 1) {
+        fillW = 1;
+    }
+    if (fillW > 0) {
+        canvas->fillRect(x + pad, y + pad, fillW, innerH, settings.foreground);
+    }
+
+    canvas->setFont(digitFont);
+}
+
 } // namespace
 
 void clockFaceBegin(const Settings& settings) {
@@ -72,7 +117,7 @@ void clockFaceBegin(const Settings& settings) {
     loggerInfo("Clock face ready, digit font height: %d", digitHeight);
 }
 
-void clockFaceRender(const Settings& settings, const struct tm& time, bool colonVisible) {
+void clockFaceRender(const Settings& settings, const struct tm& time, bool colonVisible, int batteryLevel) {
     canvas->fillScreen(settings.background);
     canvas->setFont(digitFont);
     canvas->setTextColor(settings.foreground);
@@ -97,6 +142,10 @@ void clockFaceRender(const Settings& settings, const struct tm& time, bool colon
         const int16_t centerX = startX + pairWidth + colonWidth / 2;
         canvas->fillCircle(centerX, centerY - dotOffset, dotRadius, settings.foreground);
         canvas->fillCircle(centerX, centerY + dotOffset, dotRadius, settings.foreground);
+    }
+
+    if (settings.showBattery && batteryLevel >= 0) {
+        drawBatteryIndicator(settings, batteryLevel);
     }
 
     lilka::display.drawCanvas(canvas);

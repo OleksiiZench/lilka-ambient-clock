@@ -4,6 +4,7 @@
 
 #include <lilka.h>
 
+#include "battery_level.h"
 #include "clockface.h"
 #include "logger.h"
 #include "settings.h"
@@ -15,9 +16,33 @@ SettingsStatus settingsStatus = SettingsStatus::Ok;
 bool timeSynced = false;
 unsigned long lastAttemptMs = 0;
 
+// Рівень заряду: кешуємо, щоб не смикати ADC щосекунди, та згладжуємо (EMA).
+int batteryLevel = -1;
+float batterySmoothed = -1.0f;
+unsigned long lastBatteryReadMs = 0;
+
 constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000;
 constexpr unsigned long RETRY_INTERVAL_MS = 30UL * 1000UL;               // коли часу ще немає
 constexpr unsigned long RESYNC_INTERVAL_MS = 6UL * 60UL * 60UL * 1000UL; // періодична пересинхронізація
+constexpr unsigned long BATTERY_READ_INTERVAL_MS = 15UL * 1000UL;        // як часто читати батарею
+constexpr float BATTERY_SMOOTHING = 0.3f;
+
+// Прочитати рівень заряду та згладити його. Значення -1 (немає акумулятора)
+// не згладжується і скидає фільтр.
+void updateBatteryLevel() {
+    const int level = batteryReadLevel();
+    if (level < 0) {
+        batterySmoothed = -1.0f;
+        batteryLevel = -1;
+        return;
+    }
+    if (batterySmoothed < 0.0f) {
+        batterySmoothed = level;
+    } else {
+        batterySmoothed += BATTERY_SMOOTHING * (level - batterySmoothed);
+    }
+    batteryLevel = static_cast<int>(batterySmoothed + 0.5f);
+}
 
 bool connectWiFi(unsigned long timeoutMs) {
     if (settings.wifiSsid.isEmpty()) {
@@ -98,6 +123,9 @@ void setup() {
     settingsStatus = settingsLoad(settings);
     clockFaceBegin(settings);
 
+    updateBatteryLevel();
+    lastBatteryReadMs = millis();
+
     connectAndSync();
     lastAttemptMs = millis();
 }
@@ -107,6 +135,11 @@ void loop() {
     static int lastSecond = -1;
 
     const unsigned long now = millis();
+
+    if (now - lastBatteryReadMs >= BATTERY_READ_INTERVAL_MS) {
+        lastBatteryReadMs = now;
+        updateBatteryLevel();
+    }
 
     if (!timeSynced && now - lastAttemptMs >= RETRY_INTERVAL_MS) {
         lastAttemptMs = now;
@@ -124,7 +157,7 @@ void loop() {
         const bool minuteChanged = timeinfo.tm_min != lastMinute;
         const bool tick = settings.blinkColon && timeinfo.tm_sec != lastSecond;
         if (minuteChanged || tick) {
-            clockFaceRender(settings, timeinfo, colonVisible);
+            clockFaceRender(settings, timeinfo, colonVisible, batteryLevel);
             lastMinute = timeinfo.tm_min;
             lastSecond = timeinfo.tm_sec;
         }
