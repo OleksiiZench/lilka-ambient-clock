@@ -40,28 +40,13 @@ int uartLogVprintf(const char* format, va_list args) {
 } // namespace
 
 void loggerBegin() {
-    Serial0.begin(UART_LOG_BAUD, SERIAL_8N1, UART_LOG_RX, UART_LOG_TX);
-    previousVprintf = esp_log_set_vprintf(uartLogVprintf);
+    // Дебаг-логування вимкнено для максимізації автономності
 }
 
 void loggerInfo(const char* format, ...) {
-    char buffer[LOG_BUFFER_SIZE];
-    va_list args;
-    va_start(args, format);
-    vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
-
-    lilka::serial.log("%s", buffer);
-    Serial0.println(buffer);
+    (void)format;
 }
 
 void loggerError(const char* format, ...) {
-    char buffer[LOG_BUFFER_SIZE];
-    va_list args;
-    va_start(args, format);
-    vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
-
-    lilka::serial.err("%s", buffer);
-    Serial0.println(buffer);
+    (void)format;
 }
