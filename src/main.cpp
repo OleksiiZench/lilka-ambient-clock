@@ -27,6 +27,22 @@ constexpr unsigned long RESYNC_INTERVAL_MS = 12UL * 60UL * 60UL * 1000UL; // п�
 constexpr unsigned long BATTERY_READ_INTERVAL_MS = 15UL * 1000UL;        // як часто читати батарею
 constexpr float BATTERY_SMOOTHING = 0.3f;
 
+// Параметри енергозбереження.
+constexpr uint32_t CPU_FREQUENCY_MHZ = 160;
+constexpr uint8_t BACKLIGHT_PIN = 46;
+constexpr uint8_t BACKLIGHT_PWM_CHANNEL = 0;
+constexpr uint32_t BACKLIGHT_PWM_FREQUENCY = 5000;
+constexpr uint8_t BACKLIGHT_PWM_RESOLUTION = 8;
+constexpr uint8_t BACKLIGHT_DUTY = 128; // ~50% від 255
+
+// Знизити частоту CPU та приглушити підсвічування дисплея.
+void applyPowerSaving() {
+    setCpuFrequencyMhz(CPU_FREQUENCY_MHZ);
+    ledcSetup(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_PWM_FREQUENCY, BACKLIGHT_PWM_RESOLUTION);
+    ledcAttachPin(BACKLIGHT_PIN, BACKLIGHT_PWM_CHANNEL);
+    ledcWrite(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_DUTY);
+}
+
 // Прочитати рівень заряду та згладити його. Значення -1 (немає акумулятора)
 // не згладжується і скидає фільтр.
 void updateBatteryLevel() {
@@ -130,13 +146,7 @@ void setup() {
     loggerBegin();
     loggerInfo("Lilka ambient clock starting");
 
-    // Зниження частоти CPU для економії енергії
-    setCpuFrequencyMhz(160);
-
-    // Встановлення яскравості дисплея 50% для економії заряду (GPIO46 PWM)
-    ledcSetup(0, 5000, 8);
-    ledcAttachPin(46, 0);
-    ledcWrite(0, 128);
+    applyPowerSaving();
 
     settingsStatus = settingsLoad(settings);
     clockFaceBegin(settings);
