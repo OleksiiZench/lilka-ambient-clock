@@ -44,6 +44,13 @@ void updateBatteryLevel() {
     batteryLevel = static_cast<int>(batterySmoothed + 0.5f);
 }
 
+// Повністю вимкнути радіо Wi-Fi (і після успіху, і після невдачі),
+// щоб не витрачати заряд на фонові спроби перепідключення.
+void stopWiFi() {
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+}
+
 bool connectWiFi(unsigned long timeoutMs) {
     if (settings.wifiSsid.isEmpty()) {
         return false;
@@ -98,6 +105,7 @@ void connectAndSync() {
     if (!connectWiFi(WIFI_CONNECT_TIMEOUT_MS)) {
         loggerError("Wi-Fi connection failed (status %d)", WiFi.status());
         clockFaceMessage(settings, "Немає Wi-Fi", "Повторюю спробу...");
+        stopWiFi();
         return;
     }
     loggerInfo("Wi-Fi connected, IP: %s", WiFi.localIP().toString().c_str());
@@ -107,14 +115,12 @@ void connectAndSync() {
     if (syncTime()) {
         timeSynced = true;
         loggerInfo("Time synchronized");
-        // Вимикаємо Wi-Fi після успішної синхронізації для економії заряду
-        WiFi.disconnect(true);
-        WiFi.mode(WIFI_OFF);
     } else {
         loggerError("NTP synchronization failed");
         clockFaceMessage(settings, "Помилка NTP", "Повторюю спробу...");
-        // При невдачі Wi-Fi лишається підключеним/увімкненим згідно поточної логіки
     }
+    // Вимикаємо Wi-Fi для економії заряду незалежно від результату синхронізації
+    stopWiFi();
 }
 
 } // namespace
@@ -159,12 +165,10 @@ void loop() {
     } else if (timeSynced && now - lastAttemptMs >= RESYNC_INTERVAL_MS) {
         lastAttemptMs = now;
         // Вмикаємо Wi-Fi лише на час періодичної синхронізації, потім вимикаємо
-        if (connectWiFi(WIFI_CONNECT_TIMEOUT_MS)) {
-            if (syncTime()) {
-                WiFi.disconnect(true);
-                WiFi.mode(WIFI_OFF);
-            }
+        if (connectWiFi(WIFI_CONNECT_TIMEOUT_MS) && syncTime()) {
+            loggerInfo("Time re-synchronized");
         }
+        stopWiFi();
     }
 
     struct tm timeinfo;
