@@ -101,6 +101,14 @@ SettingsStatus settingsLoad(Settings& settings) {
     readString(doc["time"]["tz"], settings.timezone);
     readString(doc["time"]["ntpServer"], settings.ntpServer);
 
+    // Порожні значення зламали б configTzTime/NTP, тож повертаємось до типових.
+    if (settings.timezone.isEmpty()) {
+        settings.timezone = DEFAULT_TZ;
+    }
+    if (settings.ntpServer.isEmpty()) {
+        settings.ntpServer = DEFAULT_NTP;
+    }
+
     if (doc["display"]["blinkColon"].is<bool>()) {
         settings.blinkColon = doc["display"]["blinkColon"].as<bool>();
     }
