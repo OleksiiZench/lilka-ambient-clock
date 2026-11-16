@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <esp_bt.h>
 #include <time.h>
 
 #include <lilka.h>
@@ -35,9 +36,10 @@ constexpr uint32_t BACKLIGHT_PWM_FREQUENCY = 5000;
 constexpr uint8_t BACKLIGHT_PWM_RESOLUTION = 8;
 constexpr uint8_t BACKLIGHT_DUTY = 128; // ~50% від 255
 
-// Знизити частоту CPU та приглушити підсвічування дисплея.
+// Знизити частоту CPU, вимкнути Bluetooth та приглушити підсвічування дисплея.
 void applyPowerSaving() {
     setCpuFrequencyMhz(CPU_FREQUENCY_MHZ);
+    btStop();
     ledcSetup(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_PWM_FREQUENCY, BACKLIGHT_PWM_RESOLUTION);
     ledcAttachPin(BACKLIGHT_PIN, BACKLIGHT_PWM_CHANNEL);
     ledcWrite(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_DUTY);
