@@ -77,7 +77,9 @@ bool connectWiFi(unsigned long timeoutMs) {
         return true;
     }
 
+    WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(true);
     WiFi.begin(settings.wifiSsid.c_str(), settings.wifiPassword.c_str());
 
     const unsigned long start = millis();
