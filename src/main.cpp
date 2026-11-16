@@ -25,7 +25,7 @@ unsigned long lastBatteryReadMs = 0;
 constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000;
 constexpr unsigned long RETRY_INTERVAL_MS = 30UL * 1000UL;                // коли часу ще немає
 constexpr unsigned long RESYNC_INTERVAL_MS = 12UL * 60UL * 60UL * 1000UL; // періодична пересинхронізація (12 годин)
-constexpr unsigned long BATTERY_READ_INTERVAL_MS = 15UL * 1000UL;        // як часто читати батарею
+constexpr unsigned long BATTERY_READ_INTERVAL_MS = 60UL * 1000UL;        // як часто читати батарею
 constexpr float BATTERY_SMOOTHING = 0.3f;
 
 // Параметри енергозбереження.
@@ -170,7 +170,11 @@ void loop() {
 
     if (now - lastBatteryReadMs >= BATTERY_READ_INTERVAL_MS) {
         lastBatteryReadMs = now;
+        const int prevBatteryLevel = batteryLevel;
         updateBatteryLevel();
+        if (batteryLevel != prevBatteryLevel) {
+            lastMinute = -1; // примусово перемалювати, щоб оновити індикатор заряду
+        }
     }
 
     if (!timeSynced && now - lastAttemptMs >= RETRY_INTERVAL_MS) {
