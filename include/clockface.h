@@ -13,5 +13,8 @@ void clockFaceBegin(const Settings& settings);
 // відсутній. Індикатор малюється лише коли settings.showBattery == true.
 void clockFaceRender(const Settings& settings, const struct tm& time, bool colonVisible, int batteryLevel);
 
+// Оновити лише двокрапку без повного перемальовування циферблата.
+void clockFaceRenderColon(const Settings& settings, bool colonVisible);
+
 // Показати службове повідомлення (для станів "підключення", "помилка" тощо).
 void clockFaceMessage(const Settings& settings, const String& line1, const String& line2 = "");

@@ -7,6 +7,10 @@ namespace {
 lilka::Canvas* canvas = nullptr;
 const uint8_t* digitFont = nullptr;
 int16_t digitHeight = 0;
+int16_t pairWidth = 0;
+int16_t colonWidth = 0;
+int16_t startX = 0;
+int16_t centerY = 0;
 
 // Зсув усього циферблата по горизонталі (від'ємне — ліворуч).
 constexpr int16_t FACE_OFFSET_X = -4;
@@ -44,6 +48,19 @@ void drawDigitsCentered(const char* text, int16_t x, int16_t centerY) {
     const int16_t baselineY = centerY - h / 2 - y1;
     canvas->setCursor(x, baselineY);
     canvas->print(text);
+}
+
+void drawColon(bool visible, uint16_t color) {
+    const int16_t dotRadius = digitHeight / 12 > 2 ? digitHeight / 12 : 2;
+    const int16_t dotOffset = digitHeight / 5;
+    const int16_t cx = startX + pairWidth + colonWidth / 2;
+    if (visible) {
+        canvas->fillCircle(cx, centerY - dotOffset, dotRadius, color);
+        canvas->fillCircle(cx, centerY + dotOffset, dotRadius, color);
+    } else {
+        canvas->fillCircle(cx, centerY - dotOffset, dotRadius, color);
+        canvas->fillCircle(cx, centerY + dotOffset, dotRadius, color);
+    }
 }
 
 // Намалювати індикатор рівня заряду у правому верхньому куті: контур
@@ -111,6 +128,12 @@ void clockFaceBegin(const Settings& settings) {
     }
 
     digitHeight = fontHeight(digitFont);
+    pairWidth = measurePair(digitFont);
+    colonWidth = pairWidth / 2;
+    const int16_t totalWidth = pairWidth * 2 + colonWidth;
+    startX = (canvas->width() - totalWidth) / 2 + FACE_OFFSET_X;
+    centerY = canvas->height() / 2;
+
     canvas->setFont(digitFont);
     canvas->setTextColor(settings.foreground);
 
@@ -122,12 +145,6 @@ void clockFaceRender(const Settings& settings, const struct tm& time, bool colon
     canvas->setFont(digitFont);
     canvas->setTextColor(settings.foreground);
 
-    const int16_t pairWidth = measurePair(digitFont);
-    const int16_t colonWidth = pairWidth / 2;
-    const int16_t totalWidth = pairWidth * 2 + colonWidth;
-    const int16_t startX = (canvas->width() - totalWidth) / 2 + FACE_OFFSET_X;
-    const int16_t centerY = canvas->height() / 2;
-
     char hours[3];
     char minutes[3];
     snprintf(hours, sizeof(hours), "%02d", time.tm_hour);
@@ -135,19 +152,19 @@ void clockFaceRender(const Settings& settings, const struct tm& time, bool colon
 
     drawDigitsCentered(hours, startX, centerY);
     drawDigitsCentered(minutes, startX + pairWidth + colonWidth, centerY);
-
-    if (colonVisible) {
-        const int16_t dotRadius = digitHeight / 12 > 2 ? digitHeight / 12 : 2;
-        const int16_t dotOffset = digitHeight / 5;
-        const int16_t centerX = startX + pairWidth + colonWidth / 2;
-        canvas->fillCircle(centerX, centerY - dotOffset, dotRadius, settings.foreground);
-        canvas->fillCircle(centerX, centerY + dotOffset, dotRadius, settings.foreground);
-    }
+    drawColon(colonVisible, settings.foreground);
 
     if (settings.showBattery && batteryLevel >= 0) {
         drawBatteryIndicator(settings, batteryLevel);
     }
 
+    lilka::display.drawCanvas(canvas);
+}
+
+void clockFaceRenderColon(const Settings& settings, bool colonVisible) {
+    // Стерти попередню двокрапку фоном і намалювати за потреби.
+    drawColon(true, settings.background);
+    drawColon(colonVisible, settings.foreground);
     lilka::display.drawCanvas(canvas);
 }
 

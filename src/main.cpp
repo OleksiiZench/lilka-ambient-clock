@@ -194,9 +194,12 @@ void loop() {
         const bool colonVisible = !settings.blinkColon || (timeinfo.tm_sec % 2 == 0);
         const bool minuteChanged = timeinfo.tm_min != lastMinute;
         const bool tick = settings.blinkColon && timeinfo.tm_sec != lastSecond;
-        if (minuteChanged || tick) {
+        if (minuteChanged) {
             clockFaceRender(settings, timeinfo, colonVisible, batteryLevel);
             lastMinute = timeinfo.tm_min;
+            lastSecond = timeinfo.tm_sec;
+        } else if (tick) {
+            clockFaceRenderColon(settings, colonVisible);
             lastSecond = timeinfo.tm_sec;
         }
     }
