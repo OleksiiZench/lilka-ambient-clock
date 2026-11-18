@@ -29,7 +29,8 @@ constexpr unsigned long BATTERY_READ_INTERVAL_MS = 60UL * 1000UL;        // як
 constexpr float BATTERY_SMOOTHING = 0.3f;
 
 // Параметри енергозбереження.
-constexpr uint32_t CPU_FREQUENCY_MHZ = 160;
+constexpr uint32_t IDLE_CPU_FREQUENCY_MHZ = 80;
+constexpr uint32_t SYNC_CPU_FREQUENCY_MHZ = 160;
 constexpr uint8_t BACKLIGHT_PIN = 46;
 constexpr uint8_t BACKLIGHT_PWM_CHANNEL = 0;
 constexpr uint32_t BACKLIGHT_PWM_FREQUENCY = 5000;
@@ -38,12 +39,22 @@ constexpr uint8_t BACKLIGHT_DUTY = 64; // ~25% від 255
 
 // Знизити частоту CPU, вимкнути Bluetooth та приглушити підсвічування дисплея.
 void applyPowerSaving() {
-    setCpuFrequencyMhz(CPU_FREQUENCY_MHZ);
+    setCpuFrequencyMhz(IDLE_CPU_FREQUENCY_MHZ);
     btStop();
     ledcSetup(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_PWM_FREQUENCY, BACKLIGHT_PWM_RESOLUTION);
     ledcAttachPin(BACKLIGHT_PIN, BACKLIGHT_PWM_CHANNEL);
     ledcWrite(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_DUTY);
 }
+
+// Підвищити частоту CPU лише на час роботи Wi-Fi та NTP.
+struct SyncCpuGuard {
+    SyncCpuGuard() {
+        setCpuFrequencyMhz(SYNC_CPU_FREQUENCY_MHZ);
+    }
+    ~SyncCpuGuard() {
+        setCpuFrequencyMhz(IDLE_CPU_FREQUENCY_MHZ);
+    }
+};
 
 // Прочитати рівень заряду та згладити його. Значення -1 (немає акумулятора)
 // не згладжується і скидає фільтр.
@@ -120,6 +131,8 @@ void connectAndSync() {
         return;
     }
 
+    SyncCpuGuard syncCpuGuard;
+
     loggerInfo("Connecting to Wi-Fi \"%s\"...", settings.wifiSsid.c_str());
     clockFaceMessage(settings, "Підключення до Wi-Fi...");
     if (!connectWiFi(WIFI_CONNECT_TIMEOUT_MS)) {
@@ -182,11 +195,14 @@ void loop() {
         connectAndSync();
     } else if (timeSynced && now - lastAttemptMs >= RESYNC_INTERVAL_MS) {
         lastAttemptMs = now;
-        // Вмикаємо Wi-Fi лише на час періодичної синхронізації, потім вимикаємо
-        if (connectWiFi(WIFI_CONNECT_TIMEOUT_MS) && syncTime()) {
-            loggerInfo("Time re-synchronized");
+        {
+            SyncCpuGuard syncCpuGuard;
+            // Вмикаємо Wi-Fi лише на час періодичної синхронізації, потім вимикаємо
+            if (connectWiFi(WIFI_CONNECT_TIMEOUT_MS) && syncTime()) {
+                loggerInfo("Time re-synchronized");
+            }
+            stopWiFi();
         }
-        stopWiFi();
     }
 
     struct tm timeinfo;
