@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <SD.h>
 #include <WiFi.h>
 #include <esp_bt.h>
 #include <time.h>
@@ -41,6 +42,7 @@ constexpr uint8_t BACKLIGHT_DUTY = 64; // ~25% від 255
 void applyPowerSaving() {
     setCpuFrequencyMhz(IDLE_CPU_FREQUENCY_MHZ);
     btStop();
+    esp_bt_mem_release(ESP_BT_MODE_BTDM);
     ledcSetup(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_PWM_FREQUENCY, BACKLIGHT_PWM_RESOLUTION);
     ledcAttachPin(BACKLIGHT_PIN, BACKLIGHT_PWM_CHANNEL);
     ledcWrite(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_DUTY);
@@ -166,6 +168,7 @@ void setup() {
     applyPowerSaving();
 
     settingsStatus = settingsLoad(settings);
+    SD.end(); // налаштування вже прочитані — звільняємо ресурси картки
     clockFaceBegin(settings);
 
     updateBatteryLevel();
