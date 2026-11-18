@@ -34,7 +34,7 @@ constexpr uint8_t BACKLIGHT_PIN = 46;
 constexpr uint8_t BACKLIGHT_PWM_CHANNEL = 0;
 constexpr uint32_t BACKLIGHT_PWM_FREQUENCY = 5000;
 constexpr uint8_t BACKLIGHT_PWM_RESOLUTION = 8;
-constexpr uint8_t BACKLIGHT_DUTY = 128; // ~50% від 255
+constexpr uint8_t BACKLIGHT_DUTY = 64; // ~25% від 255
 
 // Знизити частоту CPU, вимкнути Bluetooth та приглушити підсвічування дисплея.
 void applyPowerSaving() {
