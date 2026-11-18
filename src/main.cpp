@@ -2,6 +2,7 @@
 #include <SD.h>
 #include <WiFi.h>
 #include <esp_bt.h>
+#include <esp_sleep.h>
 #include <time.h>
 
 #include <lilka.h>
@@ -27,6 +28,8 @@ constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000;
 constexpr unsigned long RETRY_INTERVAL_MS = 30UL * 1000UL;                // коли часу ще немає
 constexpr unsigned long RESYNC_INTERVAL_MS = 12UL * 60UL * 60UL * 1000UL; // періодична пересинхронізація (12 годин)
 constexpr unsigned long BATTERY_READ_INTERVAL_MS = 60UL * 1000UL;        // як часто читати батарею
+constexpr uint64_t LIGHT_SLEEP_BLINK_US = 200ULL * 1000ULL;
+constexpr uint64_t LIGHT_SLEEP_IDLE_US = 1000ULL * 1000ULL;
 constexpr float BATTERY_SMOOTHING = 0.3f;
 
 // Параметри енергозбереження.
@@ -46,6 +49,7 @@ void applyPowerSaving() {
     ledcSetup(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_PWM_FREQUENCY, BACKLIGHT_PWM_RESOLUTION);
     ledcAttachPin(BACKLIGHT_PIN, BACKLIGHT_PWM_CHANNEL);
     ledcWrite(BACKLIGHT_PWM_CHANNEL, BACKLIGHT_DUTY);
+    esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON); // підтримуємо PWM підсвічування у light sleep
 }
 
 // Підвищити частоту CPU лише на час роботи Wi-Fi та NTP.
@@ -57,6 +61,12 @@ struct SyncCpuGuard {
         setCpuFrequencyMhz(IDLE_CPU_FREQUENCY_MHZ);
     }
 };
+
+// Засинати між перевірками часу замість активного очікування в delay().
+void sleepUntilNextTick(bool blinkColon) {
+    esp_sleep_enable_timer_wakeup(blinkColon ? LIGHT_SLEEP_BLINK_US : LIGHT_SLEEP_IDLE_US);
+    esp_light_sleep_start();
+}
 
 // Прочитати рівень заряду та згладити його. Значення -1 (немає акумулятора)
 // не згладжується і скидає фільтр.
@@ -224,5 +234,5 @@ void loop() {
     }
 
     // Коли двокрапка не блимає, достатньо перевіряти час рідше.
-    delay(settings.blinkColon ? 200 : 1000);
+    sleepUntilNextTick(settings.blinkColon);
 }
