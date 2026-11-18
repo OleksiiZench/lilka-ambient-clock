@@ -50,17 +50,32 @@ void drawDigitsCentered(const char* text, int16_t x, int16_t centerY) {
     canvas->print(text);
 }
 
-void drawColon(bool visible, uint16_t color) {
+struct ColonGeometry {
+    int16_t cx;
+    int16_t topY;
+    int16_t bottomY;
+    int16_t radius;
+};
+
+ColonGeometry colonGeometry() {
     const int16_t dotRadius = digitHeight / 12 > 2 ? digitHeight / 12 : 2;
     const int16_t dotOffset = digitHeight / 5;
-    const int16_t cx = startX + pairWidth + colonWidth / 2;
-    if (visible) {
-        canvas->fillCircle(cx, centerY - dotOffset, dotRadius, color);
-        canvas->fillCircle(cx, centerY + dotOffset, dotRadius, color);
-    } else {
-        canvas->fillCircle(cx, centerY - dotOffset, dotRadius, color);
-        canvas->fillCircle(cx, centerY + dotOffset, dotRadius, color);
+    return {
+        static_cast<int16_t>(startX + pairWidth + colonWidth / 2),
+        static_cast<int16_t>(centerY - dotOffset),
+        static_cast<int16_t>(centerY + dotOffset),
+        dotRadius,
+    };
+}
+
+template <typename T>
+void drawColonOn(T& target, bool visible, uint16_t color) {
+    if (!visible) {
+        return;
     }
+    const ColonGeometry geometry = colonGeometry();
+    target.fillCircle(geometry.cx, geometry.topY, geometry.radius, color);
+    target.fillCircle(geometry.cx, geometry.bottomY, geometry.radius, color);
 }
 
 // Намалювати індикатор рівня заряду у правому верхньому куті: контур
@@ -152,7 +167,7 @@ void clockFaceRender(const Settings& settings, const struct tm& time, bool colon
 
     drawDigitsCentered(hours, startX, centerY);
     drawDigitsCentered(minutes, startX + pairWidth + colonWidth, centerY);
-    drawColon(colonVisible, settings.foreground);
+    drawColonOn(*canvas, colonVisible, settings.foreground);
 
     if (settings.showBattery && batteryLevel >= 0) {
         drawBatteryIndicator(settings, batteryLevel);
@@ -162,10 +177,11 @@ void clockFaceRender(const Settings& settings, const struct tm& time, bool colon
 }
 
 void clockFaceRenderColon(const Settings& settings, bool colonVisible) {
-    // Стерти попередню двокрапку фоном і намалювати за потреби.
-    drawColon(true, settings.background);
-    drawColon(colonVisible, settings.foreground);
-    lilka::display.drawCanvas(canvas);
+    // Оновлюємо лише область двокрапки, не пересилаючи весь буфер на дисплей.
+    lilka::display.startWrite();
+    drawColonOn(lilka::display, true, settings.background);
+    drawColonOn(lilka::display, colonVisible, settings.foreground);
+    lilka::display.endWrite();
 }
 
 void clockFaceMessage(const Settings& settings, const String& line1, const String& line2) {
